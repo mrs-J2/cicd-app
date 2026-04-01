@@ -33,7 +33,7 @@ jobs:
           context: ./backend
           push: true
           tags: ${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:${{ env.SHORT_SHA }}
-
+#comment
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
