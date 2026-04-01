@@ -34,19 +34,3 @@ jobs:
           format: table
           severity: CRITICAL,HIGH
           exit-code: 1
-
-  CI-status:
-    needs: [build-and-scan]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          if [[ "${{ needs.build-and-scan.result }}" == "skipped" ]]; then
-            echo "CI skipped"
-          elif [[ "${{ needs.build-and-scan.result }}" == "success" ]]; then
-            echo "CI passed"
-          else
-            echo "CI failed"
-            exit 1
-          fi
-
