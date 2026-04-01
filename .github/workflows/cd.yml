@@ -3,7 +3,10 @@ name: CD — Deploy to QA
 on:
   push:
     branches: [ "main" ]
-
+# Add this at the top level (same level as 'name' and 'on')
+permissions:
+  id-token: write      # Required for OIDC with AWS
+  contents: read
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
