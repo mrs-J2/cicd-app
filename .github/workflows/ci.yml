@@ -9,15 +9,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # download the repo code to the runner
+
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # build the Docker image locally (no push)
       - name: Build Docker image
         uses: docker/build-push-action@v5
         with:
@@ -25,8 +23,6 @@ jobs:
           push: false
           tags: todo-backend:latest
           load: true
-
-      # scan the image with Trivy
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -44,12 +40,8 @@ jobs:
           if [[ "${{ needs.build-and-scan.result }}" == "skipped" ]]; then
             echo "CI skipped"
           elif [[ "${{ needs.build-and-scan.result }}" == "success" ]]; then
-            echo "CI passed"
+            echo "CI passed successfully"
           else
-            echo "CI failed"
+            echo "CI failed good"
             exit 1
           fi
-
-
-
-#AKIASE5KQ4JPBR44J5H7  47G8CWek+7YMgElHqJY+GDRrWvQlRGmlHHEjjvA6
