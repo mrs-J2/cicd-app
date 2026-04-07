@@ -2,7 +2,9 @@ name: CI — Build and Scan
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - "main"
+      - "release/*"
 
 jobs:
   build-and-scan:
