@@ -7,7 +7,7 @@ on:
     types: [ published ]
 
 permissions:
-  id-token: write      # Required for OIDC with AWS
+  id-token: write      # Required
   contents: read
 
 jobs:
