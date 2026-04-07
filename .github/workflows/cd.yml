@@ -11,23 +11,26 @@ permissions:
   contents: read
 
 jobs:
+  #Build the Docker image and push it to ECR
+  # This always runs, whether it's a QA or PROD deploy
   build-and-push:
     runs-on: ubuntu-latest
 
     outputs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}
 
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
+      #If push to main → image tag = short commit sha (ex: a3f9c12)
+      # If release      → image tag = release name   (ex: v1.0.0)
       - name: Set image tag
-        id: set_tag
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            echo "image_tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "SHORT_SHA=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
-            echo "image_tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           fi
 
       - name: Configure AWS credentials
@@ -44,12 +47,16 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:${{ steps.set_tag.outputs.image_tag }}
-
-  deploy-qa:
+          tags: ${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image_tag }}
+  
+# JOB 2: Deploy — same code, different environment
+  # environment: qa    → uses qa variables
+  # environment: prod  → uses prod variables
+  deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+
+    environment: ${{ github.event_name == 'release' && 'prod' || 'qa' }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -57,27 +64,9 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Deploy to ECS (QA)
+      - name: Deploy to ECS
         run: |
           aws ecs update-service \
             --cluster ${{ vars.ECS_CLUSTER }} \
             --service ${{ vars.ECS_SERVICE }} \
-            --force-new-deployment
-  deploy-prod:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release'
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-
-      - name: Deploy to ECS (Prod)
-        run: |
-          aws ecs update-service \
-            --cluster ${{ vars.ECS_CLUSTER_PROD }} \
-            --service ${{ vars.ECS_SERVICE_PROD }} \
             --force-new-deployment
