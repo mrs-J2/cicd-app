@@ -34,10 +34,10 @@ jobs:
             echo "image_tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT   # short commit sha
           fi
 
-  build-and-push:
+  build-and-deploy:
     needs: decide-environment
     runs-on: ubuntu-latest
-
+    name: Build & Deploy to ${{ needs.decide-environment.outputs.env }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,23 +62,35 @@ jobs:
           push: true
           tags: ${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:${{ needs.decide-environment.outputs.image_tag }}
 
-  deploy:
-    needs: [decide-environment, build-and-push]
-    runs-on: ubuntu-latest
-    name: Deploy to ${{ needs.decide-environment.outputs.env }}
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          audience: sts.amazonaws.com
-
-      - name: Deploy to ECS (force new deployment)
+      - name: Download current task definition
         run: |
-          aws ecs update-service \
-            --cluster ${{ vars.ECS_CLUSTER }} \
-            --service ${{ vars.ECS_SERVICE }} \
-            --force-new-deployment \
-            --region ${{ vars.AWS_REGION }}
+          aws ecs describe-task-definition \
+            --task-definition ${{ vars.ECS_TASK_DEFINITION }} \
+            --query taskDefinition > task-definition.json
+
+          # Clean the JSON (remove fields that cause errors when registering new revision)
+          cat task-definition.json | jq 'del(
+            .taskDefinitionArn,
+            .requiresAttributes,
+            .compatibilities,
+            .revision,
+            .status,
+            .registeredAt,
+            .registeredBy
+          )' > task-definition.json
+
+      - name: Render new task definition with our image
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ vars.CONTAINER_NAME }}   
+          image: ${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:${{ needs.decide-environment.outputs.image_tag }}  
+
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: ${{ vars.ECS_SERVICE }}
+          cluster: ${{ vars.ECS_CLUSTER }}
+          wait-for-service-stability: true
