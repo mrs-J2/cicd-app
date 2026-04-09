@@ -69,12 +69,11 @@ jobs:
             --task-definition ${{ vars.ECS_TASK_DEFINITION }} \
             --query 'taskDefinition' \
             --output json > task-definition.json
+          
+          echo "=== Original task definition downloaded ==="
+          ls -l task-definition.json
 
-          # Show the file content for debugging (you can remove this later)
-          echo "=== Task definition content ==="
-          cat task-definition.json | head -n 50
-
-      - name: Clean task definition for registration
+      - name: Clean task definition 
         run: |
           cat task-definition.json | jq 'del(
             .taskDefinitionArn,
@@ -86,11 +85,13 @@ jobs:
             .registeredBy,
             .deregisteredAt,
             .deprecatedAt,
-            .taskDefinitionArn
+            .enableFaultInjection         
           )' > cleaned-task-definition.json
 
-          # Rename for the next step
           mv cleaned-task-definition.json task-definition.json
+
+          echo "=== Cleaned task definition (first 30 lines) ==="
+          head -n 30 task-definition.json
 
       - name: Render new task definition with our image
         id: render-task-def
@@ -101,7 +102,7 @@ jobs:
           image: ${{ vars.ECR_REGISTRY }}/${{ vars.IMAGE_NAME }}:${{ needs.decide-environment.outputs.image_tag }}  
 
       - name: Deploy to Amazon ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task-def.outputs.task-definition }}
           service: ${{ vars.ECS_SERVICE }}
