@@ -10,7 +10,7 @@ jobs:
   build-and-scan:
     runs-on: ubuntu-latest
 
-    steps: #tst
+    steps: #tstt
 
       - name: Checkout code
         uses: actions/checkout@v4
