@@ -29,9 +29,9 @@ jobs:
         id: set_tag
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            echo "SHORT_SHA=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "image_tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           else
-            echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "image_tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           fi
 
       - name: Configure AWS credentials
