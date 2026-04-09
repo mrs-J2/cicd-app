@@ -7,7 +7,7 @@ on:
     types: [ published ]
 
 permissions:
-  id-token: write      # Required
+  id-token: write
   contents: read
 
 jobs:
