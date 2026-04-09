@@ -26,6 +26,7 @@ jobs:
       #If push to main → image tag = short commit sha (ex: a3f9c12)
       # If release      → image tag = release name   (ex: v1.0.0)
       - name: Set image tag
+        id: set_tag
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             echo "SHORT_SHA=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
